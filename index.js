@@ -1,10 +1,4 @@
 
-const { Pool } = require('pg');
-const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: true
-
-});
 const cool = require('cool-ascii-faces')
 const express = require('express')
 const path = require('path')
@@ -13,14 +7,17 @@ const mongodb = require('mongodb').MongoClient;
 const { Pool } = require('pg');
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl:true
+    ssl: true
 });
+
 
 express()
     .use(express.static(path.join(__dirname, 'public')))
     .set('views', path.join(__dirname, 'views'))
     .set('view engine', 'ejs')
     .get('/', (req, res) => res.render('pages/index'))
+    .get('/cool', (req, res) => res.send(cool()))
+    .get('/times', (req, res) => res.send(showTimes()))
     .get('/db', async (req, res) => {
         try {
             const client = await pool.connect()
@@ -34,35 +31,28 @@ express()
         }
     })
 
-//**************************************************************************
-//***** mongodb get all of the Routes in Routes collection where frequence>=1
-//      and sort by the name of the route.  Render information in the views/pages/mongodb.ejs
-   .get('/mongodb', function (request, response) {
+    .get('/mongodb', function (request, response) {
 
-    mongodb.connect(process.env.MONGODB_URI, function(err, client) {
-        if(err) throw err;
-        //get collection of routes
-        var db = client.db("heroku_3dkj42c0")
-        var Routes = db.collection('Routes');
-        //get all Routes with frequency >=1
-        Routes.find({ frequency : { $gte: 0 } }).sort({ name: 1 }).toArray(function (err, docs) {
+        mongodb.connect(process.env.MONGODB_URI, function(err, client) {
             if(err) throw err;
+            //get collection of routes
+            var db = client.db("heroku_3dkj42c0");
+            var Routes = db.collection('Routes');
+            //get all Routes with frequency >=1
+            Routes.find({ frequency : { $gte: 0 } }).sort({ name: 1 }).toArray(function (err, docs) {
+                if(err) throw err;
 
-            response.render('pages/mongodb', {results: docs});
+                response.render('pages/mongodb', {results: docs});
 
-        });
+            });
 
-        //close connection when your app is terminating.
-        client.close(function (err) {
-            if(err) throw err;
-        })
-    })//end of connect
-})
-//end app.get
-    .get('/cool', (req, res) => res.send(cool()))
-    .get('/times', (req, res) => res.send(showTimes()))
+            //close connection when your app is terminating.
+            client.close(function (err) {
+                if(err) throw err;
+            })
+        })//end of connect
+    })//end app.get
     .listen(PORT, () => console.log(`Listening on ${ PORT }`))
-
 
 showTimes = () => {
     let result = ''
@@ -72,4 +62,3 @@ showTimes = () => {
     }
     return result;
 }
-
